@@ -342,8 +342,31 @@ def demo_failure_mode(limiter: ValkeyRateLimiter):
             print(f"  ⚠  Valkey unreachable ({type(e).__name__}). Failing open.")
             return True
 
-    print("  Normal request:", "ALLOWED" if safe_rate_limit("user_999") else "BLOCKED")
-    print("  (To test fail-open: stop Valkey and re-run)")
+    print("  [Phase 1] Valkey healthy:")
+    for i in range(1, 4):
+        outcome = "ALLOWED" if safe_rate_limit("user_999") else "BLOCKED"
+        print(f"    Request {i}: {outcome}")
+
+    # Simulate Valkey going down by replacing execute with a failing stub
+    original_execute = limiter.client.execute_command
+
+    def broken_execute(*a, **kw):  # noqa: ANN002
+        raise ConnectionError("Simulated Valkey outage")
+
+    limiter.client.execute_command = broken_execute
+
+    print("\n  [Phase 2] Valkey goes down — fail-open kicks in:")
+    for i in range(1, 4):
+        outcome = "ALLOWED" if safe_rate_limit("user_999") else "BLOCKED"
+        print(f"    Request {i}: {outcome}")
+
+    # Restore so subsequent demos aren't affected
+    limiter.client.execute_command = original_execute
+
+    print("\n  [Phase 3] Valkey recovers:")
+    for i in range(1, 4):
+        outcome = "ALLOWED" if safe_rate_limit("user_999") else "BLOCKED"
+        print(f"    Request {i}: {outcome}")
 
 
 # ─── Entry point ──────────────────────────────────────────────────────────────
