@@ -23,15 +23,22 @@ Three production-grade rate limiting strategies implemented in pure Python + Lua
 - Python 3.8+
 - Valkey 9.0+ (for `HEXPIRE` support in the token bucket demo)
 
-```bash
-pip install valkey
-```
-
 ---
 
 ## Quickstart
 
-**Start Valkey:**
+**1. Clone and set up the environment:**
+
+```bash
+git clone https://github.com/prabal/valkey-rate-limiter.git
+cd valkey-rate-limiter
+bash setup.sh
+source .venv/bin/activate
+```
+
+`setup.sh` creates a virtual environment and installs the only dependency (`valkey`).
+
+**2. Start Valkey:**
 
 ```bash
 docker run -d \
@@ -40,7 +47,7 @@ docker run -d \
   valkey/valkey:latest
 ```
 
-**Run the demo:**
+**3. Run the demo:**
 
 ```bash
 python rate_limiter_demo.py
