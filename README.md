@@ -91,6 +91,78 @@ redis.call('HEXPIRE', key, ttl_seconds, 'FIELDS', 2, 'tokens', 'last_refill')
 
 ---
 
+## Sample output
+
+```
+  Connecting to Valkey at localhost:6379 ...
+  ✓ Connected
+
+════════════════════════════════════════════════════════════
+  DEMO 1: Sliding Window  (5 req / 10 sec window)
+════════════════════════════════════════════════════════════
+  Req  1:  ✓ ALLOWED  [████░░░░░░░░░░░░░░░░]  1/5  (resets in 10000ms)
+  Req  2:  ✓ ALLOWED  [████████░░░░░░░░░░░░]  2/5  (resets in 10000ms)
+  Req  3:  ✓ ALLOWED  [████████████░░░░░░░░]  3/5  (resets in 10000ms)
+  Req  4:  ✓ ALLOWED  [████████████████░░░░]  4/5  (resets in 10000ms)
+  Req  5:  ✓ ALLOWED  [████████████████████]  5/5  (resets in 10000ms)
+  Req  6:  ✗ BLOCKED  [████████████████████]  5/5  (resets in 10000ms)
+  Req  7:  ✗ BLOCKED  [████████████████████]  5/5  (resets in 10000ms)
+  Req  8:  ✗ BLOCKED  [████████████████████]  5/5  (resets in 10000ms)
+
+  Waiting 10s for window to reset...
+
+  Window reset — requests should be allowed again:
+  Req 9:   ✓ ALLOWED  [████░░░░░░░░░░░░░░░░]  1/5  (resets in 10000ms)
+
+════════════════════════════════════════════════════════════
+  DEMO 2: Token Bucket  (capacity=5, refill=1 token/sec)
+════════════════════════════════════════════════════════════
+  — Burst 6 requests immediately:
+  Req  1:  ✓ ALLOWED  [████░░░░░░░░░░░░░░░░]  1/5  (resets in 1000ms)
+  Req  2:  ✓ ALLOWED  [████████░░░░░░░░░░░░]  2/5  (resets in 1000ms)
+  Req  3:  ✓ ALLOWED  [████████████░░░░░░░░]  3/5  (resets in 1000ms)
+  Req  4:  ✓ ALLOWED  [████████████████░░░░]  4/5  (resets in 1000ms)
+  Req  5:  ✓ ALLOWED  [████████████████████]  5/5  (resets in 1000ms)
+  Req  6:  ✗ BLOCKED  [████████████████████]  5/5  (resets in 1000ms)
+
+  Waiting 3 seconds (bucket refills 3 tokens)...
+  — 3 more requests (should allow 3):
+  Req  7:  ✓ ALLOWED  [████████████░░░░░░░░]  3/5  (resets in 1000ms)
+  Req  8:  ✓ ALLOWED  [████████████████░░░░]  4/5  (resets in 1000ms)
+  Req  9:  ✓ ALLOWED  [████████████████████]  5/5  (resets in 1000ms)
+
+════════════════════════════════════════════════════════════
+  DEMO 3: Token-Aware  (daily budget = 1,000 tokens)
+════════════════════════════════════════════════════════════
+  GPT-4o small call         (  150 tokens):  ✓ ALLOWED  [███░░░░░░░░░░░░░░░░░]  150/1000
+  GPT-4o medium call        (  300 tokens):  ✓ ALLOWED  [█████████░░░░░░░░░░░]  450/1000
+  GPT-4o large call         (  400 tokens):  ✓ ALLOWED  [█████████████████░░░]  850/1000
+  GPT-4o huge call          (  800 tokens):  ✗ BLOCKED  [█████████████████████████████████]  1650/1000
+
+════════════════════════════════════════════════════════════
+  DEMO 4: Failure Mode — Fail Open
+════════════════════════════════════════════════════════════
+  [Phase 1] Valkey healthy:
+    Request 1: ALLOWED
+    Request 2: ALLOWED
+    Request 3: ALLOWED
+
+  [Phase 2] Valkey goes down — fail-open kicks in:
+  ⚠  Valkey unreachable (ConnectionError). Failing open.
+    Request 1: ALLOWED
+  ⚠  Valkey unreachable (ConnectionError). Failing open.
+    Request 2: ALLOWED
+  ⚠  Valkey unreachable (ConnectionError). Failing open.
+    Request 3: ALLOWED
+
+  [Phase 3] Valkey recovers:
+    Request 1: ALLOWED
+    Request 2: ALLOWED
+    Request 3: BLOCKED
+```
+
+---
+
 ## Key design choices
 
 - **All mutations are atomic Lua scripts** — no TOCTOU races under concurrent load
