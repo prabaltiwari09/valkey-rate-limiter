@@ -32,11 +32,11 @@ Three production-grade rate limiting strategies implemented in pure Python + Lua
 ```bash
 git clone https://github.com/prabal/valkey-rate-limiter.git
 cd valkey-rate-limiter
-bash setup.sh
+bash setup_valkey.sh
 source .venv/bin/activate
 ```
 
-`setup.sh` creates a virtual environment and installs the only dependency (`valkey`).
+`setup_valkey.sh` creates a virtual environment and installs the only dependency (`valkey`).
 
 **2. Start Valkey:**
 
@@ -50,7 +50,21 @@ docker run -d \
 **3. Run the demo:**
 
 ```bash
+# Interactive demo (4 strategies, ~30s total)
 python rate_limiter_demo.py
+
+# Scale simulation (200 concurrent users, ~90s total)
+python rate_limiter_demo.py --scale
+
+# Scale simulation for a single strategy
+python rate_limiter_demo.py --scale --strategy sliding_window
+# choices: sliding_window | token_bucket | token_aware | all
+```
+
+**4. Run tests** (no Valkey needed — all mocked):
+
+```bash
+pytest tests/
 ```
 
 ---
